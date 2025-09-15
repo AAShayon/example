@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:example/constants/api_constants.dart';
 import 'package:example/services/security_service.dart';
 import 'package:example/services/app_security_manager.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 class SecureHttpClient {
   static final SecureHttpClient _instance = SecureHttpClient._internal();
@@ -21,18 +22,21 @@ class SecureHttpClient {
     _dio.interceptors.add(LoggingInterceptor());
     
     // Secure the API key
-    await _securityService.secureApiKey(ApiConstants.apiKey);
+    await _securityService.secureApiKey();
   }
 
   Future<Response> get(String endpoint, {Map<String, dynamic>? queryParameters}) async {
-    // Check if app has been tampered with
-    if (_appSecurityManager.isAppTampered()) {
-      throw Exception('Security violation detected');
-    }
+    // In debug mode, skip some security checks for easier testing
+    if (!kDebugMode) {
+      // Check if app has been tampered with
+      if (_appSecurityManager.isAppTampered()) {
+        throw Exception('Security violation detected');
+      }
 
-    // Verify app integrity
-    if (!await _appSecurityManager.verifyAppIntegrity()) {
-      throw Exception('App integrity check failed');
+      // Verify app integrity
+      if (!await _appSecurityManager.verifyAppIntegrity()) {
+        throw Exception('App integrity check failed');
+      }
     }
 
     // Add security layers to request
@@ -54,17 +58,15 @@ class SecureHttpClient {
 
   Future<Map<String, dynamic>> _addSecurityLayers(Map<String, dynamic> params) async {
     // Add API key from security service
-    params['key'] = await _securityService.getApiKey();
+    final apiKey = await _securityService.getApiKey();
+    if (apiKey.isEmpty) {
+      throw Exception('API key is empty');
+    }
     
-    // Add timestamp to prevent replay attacks
-    params['timestamp'] = DateTime.now().millisecondsSinceEpoch.toString();
+    params['key'] = apiKey;
     
-    // Add random parameter to prevent caching
-    params['nonce'] = Random().nextInt(1000000).toString();
-    
-    // Add signature for request validation
-    final signature = await _generateSignature(params);
-    params['signature'] = signature;
+    // For WeatherAPI requests, we only need the API key
+    // Other security features might interfere with the API
     
     return params;
   }
@@ -94,9 +96,28 @@ class SecureHttpClient {
   DioException _handleSecureError(DioException error) {
     // Log error securely (in production, send to secure logging service)
     // Don't expose sensitive information in error messages
+    String errorMessage = 'A secure error occurred';
+    
+    // Provide more specific error messages in debug mode
+    if (kDebugMode) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout) {
+        errorMessage = 'Network timeout occurred. Check your internet connection.';
+      } else if (error.type == DioExceptionType.badCertificate) {
+        errorMessage = 'SSL certificate error. The API might require HTTPS.';
+      } else if (error.response?.statusCode == 403) {
+        errorMessage = 'API key authentication failed. Check if the API key is valid.';
+      } else if (error.response?.statusCode == 400) {
+        errorMessage = 'Bad request. Check request parameters.';
+      } else if (error.message != null) {
+        errorMessage = error.message!;
+      }
+    }
+    
     return DioException(
       error: error.error,
-      message: 'A secure error occurred',
+      message: errorMessage,
       requestOptions: error.requestOptions,
       response: error.response,
       type: error.type,

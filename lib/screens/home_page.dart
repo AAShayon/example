@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:example/services/weather_service.dart';
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -108,7 +110,11 @@ class _HomePageState extends State<HomePage> {
                 SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _getForecast,
-                  child: _isLoading 
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF4A90E2),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: _isLoading
                     ? SizedBox(
                         width: 20,
                         height: 20,
@@ -118,10 +124,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       )
                     : Text('Search'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF4A90E2),
-                    foregroundColor: Colors.white,
-                  ),
                 ),
               ],
             ),

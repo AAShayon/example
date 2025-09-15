@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:example/constants/api_constants.dart';
-import 'package:example/services/secure_http_client.dart';
+import 'package:example/services/weather_api_client.dart';
 import 'package:example/services/app_security_manager.dart';
 
 class WeatherService {
@@ -8,12 +8,15 @@ class WeatherService {
   factory WeatherService() => _instance;
   WeatherService._internal();
 
-  final SecureHttpClient _httpClient = SecureHttpClient();
+  final WeatherApiClient _httpClient = WeatherApiClient();
   final AppSecurityManager _securityManager = AppSecurityManager();
 
   Future<void> initialize() async {
     await _httpClient.initialize();
     await _securityManager.initialize();
+    
+    // Test API key retrieval (we'll do this through the http client)
+    // The actual test will happen when the client tries to get the API key
   }
 
   Future<Map<String, dynamic>> getForecast({
@@ -35,7 +38,23 @@ class WeatherService {
 
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
-      throw Exception('Failed to fetch weather data: ${e.message}');
+      String errorMessage = 'Failed to fetch weather data';
+      
+      if (e.response?.statusCode == 401) {
+        errorMessage = 'Invalid API key. Please check your API key.';
+      } else if (e.response?.statusCode == 400) {
+        errorMessage = 'Bad request. Please check the location name.';
+      } else if (e.response?.statusCode == 403) {
+        errorMessage = 'API key forbidden. Please check your API key permissions.';
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+                 e.type == DioExceptionType.receiveTimeout ||
+                 e.type == DioExceptionType.sendTimeout) {
+        errorMessage = 'Network timeout. Please check your internet connection.';
+      } else if (e.message != null) {
+        errorMessage = e.message!;
+      }
+      
+      throw Exception(errorMessage);
     }
   }
 }

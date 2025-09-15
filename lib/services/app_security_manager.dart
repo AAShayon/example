@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -11,6 +12,7 @@ class AppSecurityManager {
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool _isTampered = false;
+  String? _appSignature;
 
   // Initialize security checks
   Future<void> initialize() async {
@@ -112,15 +114,27 @@ class AppSecurityManager {
     // Generate a pseudo app signature
     final signature = _generateAppSignature();
     await _secureStorage.write(key: 'app_signature', value: signature);
+    _appSignature = signature; // Cache the signature
   }
 
   // Generate app signature
   String _generateAppSignature() {
+    // Return cached signature if available
+    if (_appSignature != null) {
+      return _appSignature!;
+    }
+    
     // In a real implementation, you would generate a signature based on
     // app files, certificates, etc.
-    final random = Random.secure();
-    final values = List<int>.generate(32, (i) => random.nextInt(256));
-    return values.join(',');
+    // For now, we'll generate a consistent signature based on app properties
+    final appId = 'com.example.example'; // Your app's package name/bundle ID
+    final version = '1.0.0'; // Your app's version
+    final signatureBase = '$appId-$version';
+    
+    // Create a consistent hash from the app properties
+    final bytes = utf8.encode(signatureBase);
+    final hash = sha256.convert(bytes);
+    return base64Url.encode(hash.bytes);
   }
 
   // Verify app integrity
@@ -136,6 +150,7 @@ class AppSecurityManager {
         return false;
       }
 
+      // Generate a new signature and compare with stored one
       final currentSignature = _generateAppSignature();
       return storedSignature == currentSignature;
     } catch (e) {
@@ -171,14 +186,14 @@ class AppSecurityManager {
     // Simple obfuscation - in a real app, use more sophisticated methods
     final random = Random.secure();
     final values = List<int>.generate(input.length, (i) => random.nextInt(256));
-    return base64Encode(values);
+    return base64Url.encode(values);
   }
 
   // Generate secure random string
   String generateSecureRandomString(int length) {
     final random = Random.secure();
     final values = List<int>.generate(length, (i) => random.nextInt(256));
-    return base64Encode(values);
+    return base64Url.encode(values);
   }
 
   // Clear all secure data

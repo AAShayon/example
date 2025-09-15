@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow HTTPS traffic to all domains -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Trust preinstalled CAs -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Allow cleartext traffic to specific domains if needed -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">api.weatherapi.com</domain>
+    </domain-config>
+    
+    <!-- Debug overrides (only used when android:debuggable="true") -->
+    <debug-overrides>
+        <trust-anchors>
+            <!-- Trust user added CAs -->
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>
