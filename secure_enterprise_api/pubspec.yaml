@@ -1,0 +1,30 @@
+name: secure_enterprise_api
+description: A secure enterprise API client with advanced security features for protecting sensitive endpoints and keys.
+version: 1.0.0
+homepage: https://yourcompany.com
+
+environment:
+  sdk: ">=2.17.0 <4.0.0"
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.0.0
+  flutter_secure_storage: ^9.0.0
+  crypto: ^3.0.0
+  logger: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.yourcompany.secureapi
+        pluginClass: SecureApiPlugin
+      ios:
+        pluginClass: SecureApiPlugin
